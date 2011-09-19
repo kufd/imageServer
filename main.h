@@ -11,8 +11,6 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
 #include <string>
 #include <cstring>
@@ -25,7 +23,9 @@
 #include "libs/log.class.h"
 #include "libs/request.class.h"
 #include "libs/config.class.h"
-#include <pthread.h>
+#include "libs/imageProcessor.class.h"
+#include "libs/cacheList.class.h"
+#include <errno.h>
 
 
 

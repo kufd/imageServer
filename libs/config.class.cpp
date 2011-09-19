@@ -8,6 +8,7 @@ config::config()
 	_data["port"]="1111";
 	_data["imagesDir"]="/var/images";
 	_data["cacheDir"]="/var/cache";
+	_data["daemon"]="no";
 
 	//відкриття файлу налаштуваннь
 	std::ifstream file("conf/imageServer.conf", std::ios::in | std::ios::binary);
@@ -67,6 +68,33 @@ config::config()
 				{
 					value+=ch;
 				}
+			}
+		}
+	}
+
+	_data["cacheListDir"]=_data["cacheDir"]+"/list";
+
+	//Тут просто створюю директорії без перевірки їх існування
+	//якщо вони вже є то просто функція створення директорії поверне помилку
+	mkdir(_data["cacheDir"].c_str(), 0755);
+	mkdir(_data["cacheListDir"].c_str(), 0755);
+
+	//Створюю піддиректорії кешу
+	for(int i1=48; i1<=112; i1++)
+	{
+		if(i1==58)
+			i1=97;
+		mkdir((_data["cacheDir"]+"/"+(char)i1).c_str(), 0755);
+		for(int i2=48; i2<=112; i2++)
+		{
+			if(i2==58)
+				i2=97;
+			mkdir((_data["cacheDir"]+"/"+(char)i1+"/"+(char)i2).c_str(), 0755);
+			for(int i3=48; i3<=112; i3++)
+			{
+				if(i3==58)
+					i3=97;
+				mkdir((_data["cacheDir"]+"/"+(char)i1+"/"+(char)i2+"/"+(char)i3).c_str(), 0755);
 			}
 		}
 	}

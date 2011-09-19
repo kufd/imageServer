@@ -3,14 +3,15 @@
 
 #include "functions.h"
 
-class log
+class myLog
 {
     std::string path;
     int logLevel;
     std::ofstream file;
+    pthread_mutex_t _mutex;
   public:
-    log(std::string setPath, int setLogLevel);
-    ~log();
+    myLog(std::string setPath, int setLogLevel);
+    ~myLog();
     void add(std::string message, int level);
 };
 

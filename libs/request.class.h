@@ -15,7 +15,9 @@ class request
 	request(std::string request);
     ~request();
     std::map<std::string, std::string> data();
+    std::string data(std::string key);
     std::map<std::string, std::string> params();
+    std::string params(std::string key);
     static std::string urlDecode(const std::string & s);
 };
 

@@ -8,8 +8,8 @@
 #include "main.h"
 
 //global variables
-config config;
-log log(config.get("log"), strToInt(config.get("logLevel")));
+class config config;
+class myLog myLog(config.get("log"), strToInt(config.get("logLevel")));
 
 void *serveSocket(void *ptr)
 {
@@ -17,8 +17,7 @@ void *serveSocket(void *ptr)
 	char buf[1025];
 	int bytesRead;
 	std::string requestString="";
-
-	log.add("start: "+intToStr(socket), 0);
+	class imageProcessor imageProcessor(&config, &myLog);
 
 	// Поступили данные от клиента, читаем их
 	while((bytesRead = recv(socket, buf, 1024, 0))>0)
@@ -28,24 +27,31 @@ void *serveSocket(void *ptr)
 	}
 
 	//create request object
-	request request(requestString);
+	class request request(requestString);
 
-	/*
-	std::map<std::string, std::string> d = request.params();
-	requestString += "\n\n\n\n\n\n\n\n";
-	for(std::map<std::string, std::string>::iterator it = d.begin(); it != d.end(); it++)
-	{
-		requestString += it->first+" = "+it->second+"\n\n\n";
-	}
+	imageProcessor.setRequest(&request);
 
-
-	//Отправляем данные обратно клиенту
-	send(socket, requestString.c_str(), requestString.size(), 0);
-	 */
+	//send answer into socket
+	imageProcessor.writeIntoSocket(socket);
 
 	close(socket);
+}
 
-	log.add("stop: "+intToStr(socket), 0);
+
+/**
+ * There is in thread clearing cacheList
+ */
+void *clearCacheList(void *ptr)
+{
+	while(true)
+	{
+		//clear cacheList
+		class cacheList cacheList(&config, &myLog);
+		cacheList.clear();
+
+		//sleep for a day
+		exactSleep(24*60*60);
+	}
 }
 
 
@@ -55,6 +61,22 @@ int main()
 	int listener;
 	struct sockaddr_in addr;
 	std::set<int> clients;
+
+	//go to daemon mode
+	if(config.get("daemon")=="yes")
+	{
+		if(daemon(0,0)==-1)
+		{
+			myLog.add("ERROR. Can't set daemon mode.", 0);
+			exit(1);
+		}
+	}
+
+	myLog.add("Starting server.", 0);
+
+	//starting clearing cacheList thread
+	pthread_t threadClearingCacheList;
+	pthread_create(&threadClearingCacheList, NULL, clearCacheList, NULL);
 
 	listener = socket(AF_INET, SOCK_STREAM, 0);
 	if(listener < 0)
@@ -97,8 +119,9 @@ int main()
 		int mx = std::max(listener, *max_element(clients.begin(), clients.end()));
 		if(select(mx+1, &readset, NULL, NULL, &timeout) <= 0)
 		{
-			perror("select");
-			exit(3);
+			continue;
+			//perror("select");
+			//exit(3);
 		}
 
 		// Определяем тип события и выполняем соответствующие действия
@@ -127,11 +150,17 @@ int main()
 				//Викликаємо в окремому потоці функцію обробки з’єднання
 				pthread_t thread;
 				pthread_create(&thread, NULL, serveSocket, (void*) *it);
+				//pthread_join(thread, NULL);
 			}
 		}
 
 		//std::cout<<"clients: "<<clients.size()<<std::endl;
 	}
+
+	//wait finish of clearing cache thread
+	pthread_join(threadClearingCacheList, NULL);
+
+	myLog.add("Stopping server.", 0);
 
 	return 0;
 }

@@ -17,10 +17,22 @@ std::map<std::string, std::string> request::data()
 	return _data;
 }
 
+//method returns value from data by key
+std::string request::data(std::string key)
+{
+	return _data[key];
+}
+
 //method returns get params of request
 std::map<std::string, std::string> request::params()
 {
 	return _params;
+}
+
+//method returns value from params by key
+std::string request::params(std::string key)
+{
+	return _params[key];
 }
 
 std::string request::urlDecode(const std::string & s)
