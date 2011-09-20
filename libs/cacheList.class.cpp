@@ -1,13 +1,14 @@
 #include "cacheList.class.h"
 
-cacheList::cacheList(class config *config, class myLog *log)
+cacheList::cacheList(class config *config, class myLog *log, class myLog *logError)
 {
 	_config = config;
 	_log = log;
+	_logError = logError;
 
 	if(pthread_mutex_init(&_mutex, 0)!=0)
 	{
-		_log->add("ERROR. Initializing cacheList::_mutex.", 0);
+		_logError->add("ERROR. Initializing cacheList::_mutex.", 0);
 		exit(1);
 	}
 }
@@ -29,7 +30,7 @@ void cacheList::add(const std::string &filename, int ad)
 	}
 	else
 	{
-		_log->add("ПОМИЛКА. Помилка при відкритті файлу: "+path, 0);
+		_logError->add("ПОМИЛКА. Помилка при відкритті файлу: "+path, 0);
 	}
 	close(file);
 	pthread_mutex_unlock(&_mutex);
@@ -69,9 +70,9 @@ void cacheList::clear()
 			data=data.substr(loc1+1);
 
 			if(remove(cacheFilePath.c_str())!=0)
-				_log->add("ERROR. File can't be removed: "+cacheFilePath, 0);
+				_logError->add("ERROR. File can't be removed: "+cacheFilePath, 5);
 			else
-				_log->add("File was removed: "+cacheFilePath, 0);
+				_log->add("File was removed: "+cacheFilePath, 5);
 
 			//sleep
 			usleep(1000);
@@ -79,9 +80,9 @@ void cacheList::clear()
 
 		//remove cache list file
 		if(remove(cacheListPath.c_str())!=0)
-			_log->add("ERROR. File can't be removed: "+cacheListPath, 0);
+			_logError->add("ERROR. File can't be removed: "+cacheListPath, 5);
 		else
-			_log->add("File was removed: "+cacheListPath, 0);
+			_log->add("File was removed: "+cacheListPath, 5);
 
 		//open new file
 		cacheListPath = _config->get("cacheListDir")+"/"+get_datetime("%d.%m.%Y", time(NULL)-(++i)*24*60*60)+".list";

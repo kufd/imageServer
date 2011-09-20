@@ -5,11 +5,13 @@
  *      Author: kufd
  */
 
-#include "main.h"
+#include "imageServer.h"
 
 //global variables
 class config config;
 class myLog myLog(config.get("log"), strToInt(config.get("logLevel")));
+class myLog myLogError(config.get("logError"), strToInt(config.get("logLevel")));
+bool stop=false;
 
 void *serveSocket(void *ptr)
 {
@@ -17,7 +19,7 @@ void *serveSocket(void *ptr)
 	char buf[1025];
 	int bytesRead;
 	std::string requestString="";
-	class imageProcessor imageProcessor(&config, &myLog);
+	class imageProcessor imageProcessor(&config, &myLog, &myLogError);
 
 	// Поступили данные от клиента, читаем их
 	while((bytesRead = recv(socket, buf, 1024, 0))>0)
@@ -46,7 +48,7 @@ void *clearCacheList(void *ptr)
 	while(true)
 	{
 		//clear cacheList
-		class cacheList cacheList(&config, &myLog);
+		class cacheList cacheList(&config, &myLog, &myLogError);
 		cacheList.clear();
 
 		//sleep for a day
@@ -54,20 +56,33 @@ void *clearCacheList(void *ptr)
 	}
 }
 
-
+/**
+ * signal stop handler
+ */
+void signalStop(int signo)
+{
+	stop=true;
+}
 
 int main()
 {
 	int listener;
 	struct sockaddr_in addr;
-	std::set<int> clients;
+	std::set<int> clients, clientsTmp;
+
+	//initialization catching signal SIGINT
+	if(signal(SIGINT,signalStop)==SIG_ERR)
+	{
+		myLogError.add("ERROR. Can't initialize catching signal SIGINT.", 0);
+		exit(1);
+	}
 
 	//go to daemon mode
 	if(config.get("daemon")=="yes")
 	{
 		if(daemon(0,0)==-1)
 		{
-			myLog.add("ERROR. Can't set daemon mode.", 0);
+			myLogError.add("ERROR. Can't set daemon mode.", 0);
 			exit(1);
 		}
 	}
@@ -81,7 +96,8 @@ int main()
 	listener = socket(AF_INET, SOCK_STREAM, 0);
 	if(listener < 0)
 	{
-		perror("socket");
+		myLogError.add((std::string)"ERROR. "+strerror(errno), 0);
+		//perror("socket");
 		exit(1);
 	}
 
@@ -92,7 +108,8 @@ int main()
 	addr.sin_addr.s_addr = INADDR_ANY;
 	if(bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
-		perror("bind");
+		myLogError.add((std::string)"ERROR. "+strerror(errno), 0);
+		//perror("bind");
 		exit(2);
 	}
 
@@ -100,7 +117,7 @@ int main()
 
 	clients.clear();
 
-	while(1)
+	while(!stop)
 	{
 		// Заполняем множество сокетов
 		fd_set readset;
@@ -108,7 +125,9 @@ int main()
 		FD_SET(listener, &readset);
 
 		for(std::set<int>::iterator it = clients.begin(); it != clients.end(); it++)
+		{
 			FD_SET(*it, &readset);
+		}
 
 		// Задаём таймаут
 		timeval timeout;
@@ -119,6 +138,7 @@ int main()
 		int mx = std::max(listener, *max_element(clients.begin(), clients.end()));
 		if(select(mx+1, &readset, NULL, NULL, &timeout) <= 0)
 		{
+			myLogError.add((std::string)"WARNING. "+strerror(errno), 0);
 			continue;
 			//perror("select");
 			//exit(3);
@@ -131,12 +151,13 @@ int main()
 			int sock = accept(listener, NULL, NULL);
 			if(sock < 0)
 			{
-				perror("accept");
-				exit(3);
+				myLogError.add((std::string)"WARNING. "+strerror(errno), 0);
+				continue;
+				//perror("accept");
+				//exit(3);
 			}
 
 			fcntl(sock, F_SETFL, O_NONBLOCK);
-
 			clients.insert(sock);
 		}
 
@@ -144,21 +165,30 @@ int main()
 		{
 			if(FD_ISSET(*it, &readset))
 			{
-				//Видаляю сокет зі списку
-				clients.erase(it);
-
 				//Викликаємо в окремому потоці функцію обробки з’єднання
 				pthread_t thread;
 				pthread_create(&thread, NULL, serveSocket, (void*) *it);
 				//pthread_join(thread, NULL);
+				pthread_detach(thread);
+			}
+			else
+			{
+				//save not used sockets into temp set
+				clientsTmp.insert(*it);
 			}
 		}
 
-		//std::cout<<"clients: "<<clients.size()<<std::endl;
+		//replace clients by clientsTmp(mot used sockets)
+		clients=clientsTmp;
+		clientsTmp.clear();
 	}
 
+	//close listener socket
+	close(listener);
+
 	//wait finish of clearing cache thread
-	pthread_join(threadClearingCacheList, NULL);
+	//pthread_join(threadClearingCacheList, NULL);
+	pthread_cancel(threadClearingCacheList);
 
 	myLog.add("Stopping server.", 0);
 

@@ -1,10 +1,11 @@
 #include "imageProcessor.class.h"
 
 
-imageProcessor::imageProcessor(class config *config, class myLog *log)
+imageProcessor::imageProcessor(class config *config, class myLog *log, class myLog *logError)
 {
 	_config = config;
 	_log = log;
+	_logError = logError;
 }
 
 imageProcessor::~imageProcessor()
@@ -73,13 +74,13 @@ void imageProcessor::writeIntoSocket(int socket)
 {
 	try
 	{
-		_log->add("New request. Parameters: "+_request->data("URL"), 7);
+		_log->add("New request. Parameters: "+_request->data("URL"), 3);
 
 		std::string cacheFileName, extension, cacheFilePath, hash;
 
 		if(_request->params("f")=="" && _request->params("fd")=="")
 		{
-			_log->add("ПОМИЛКА. Не вказаний файл в параметрах: "+_request->data("URL"), 5);
+			_logError->add("ПОМИЛКА. Не вказаний файл в параметрах: "+_request->data("URL"), 6);
 			writeErrorImgIntoSocket(socket);
 			return;
 		}
@@ -100,7 +101,7 @@ void imageProcessor::writeIntoSocket(int socket)
 			std::string msg="";
 			if(remove(cacheFilePath.c_str())!=0)
 			{
-				_log->add("ERROR. File can't be removed: "+cacheFilePath, 0);
+				_logError->add("ERROR. File can't be removed: "+cacheFilePath, 5);
 				msg="ERROR. File can't be removed.";
 			}
 			else
@@ -146,11 +147,10 @@ void imageProcessor::writeIntoSocket(int socket)
 			}
 			if(sourceFilePath=="")
 			{
-				_log->add("ПОМИЛКА. Не відкриваються файли малюнків. Параметри: "+_request->data("URL"), 5);
+				_logError->add("ПОМИЛКА. Не відкриваються файли малюнків. Параметри: "+_request->data("URL"), 5);
 				writeErrorImgIntoSocket(socket);
 				return;
 			}
-
 
 			if(_request->params("action")=="")
 			{
@@ -158,7 +158,7 @@ void imageProcessor::writeIntoSocket(int socket)
 				_log->add("Output source file: "+sourceFilePath, 5);
 				if(!writeFileIntoSocket(socket, sourceFilePath))
 				{
-					_log->add("ПОМИЛКА. Не вдалось відкрити файл: "+sourceFilePath+". Параметри: "+_request->data("URL"), 5);
+					_logError->add("ПОМИЛКА. Не вдалось відкрити файл: "+sourceFilePath+". Параметри: "+_request->data("URL"), 5);
 					writeErrorImgIntoSocket(socket);
 					return;
 				}
@@ -182,7 +182,7 @@ void imageProcessor::writeIntoSocket(int socket)
 
 					if((bottom-top)<=0 || (right-left)<=0)
 					{
-						_log->add("ПОМИЛКА. Неправильні параметри: "+_request->data("URL"), 5);
+						_logError->add("ПОМИЛКА. Неправильні параметри: "+_request->data("URL"), 5);
 						writeErrorImgIntoSocket(socket);
 						return;
 					}
@@ -204,7 +204,7 @@ void imageProcessor::writeIntoSocket(int socket)
 				{
 					//Не працює на даний час
 				}
-				else if(_request->params("action")=="resize_proportion" || _request->params("action")=="3")
+				else if(_request->params("action")=="resizeProportion" || _request->params("action")=="3")
 				{
 					int w = _request->params("w")!="" ? strToInt(_request->params("w")) : 0;
 					int h = _request->params("h")!="" ? strToInt(_request->params("h")) : 0;
@@ -216,7 +216,7 @@ void imageProcessor::writeIntoSocket(int socket)
 
 					if((w==0 && h==0 && bs==0) || w<0 || h<0 || bs<0)
 					{
-						_log->add("ПОМИЛКА. Неправильні параметри: "+_request->data("URL"), 5);
+						_logError->add("ПОМИЛКА. Неправильні параметри: "+_request->data("URL"), 5);
 						writeErrorImgIntoSocket(socket);
 						return;
 					}
@@ -270,7 +270,7 @@ void imageProcessor::writeIntoSocket(int socket)
 						}
 					}
 				}
-				else if(_request->params("action")=="cut_resize_proportion" || _request->params("action")=="4")
+				else if(_request->params("action")=="cutResizeProportion" || _request->params("action")=="4")
 				{
 					int w = _request->params("w")!="" ? strToInt(_request->params("w")) : 0;
 					int h = _request->params("h")!="" ? strToInt(_request->params("h")) : 0;
@@ -279,7 +279,7 @@ void imageProcessor::writeIntoSocket(int socket)
 
 					if((w==0 && h==0) || w<0 || h<0 || autocrop!="center")
 					{
-						_log->add("ПОМИЛКА. Неправильні параметри: "+_request->data("URL"), 5);
+						_logError->add("ПОМИЛКА. Неправильні параметри: "+_request->data("URL"), 5);
 						writeErrorImgIntoSocket(socket);
 						return;
 					}
@@ -375,7 +375,7 @@ void imageProcessor::writeIntoSocket(int socket)
 				if(ad>0)
 				{
 					master.write(cacheFilePath);
-					class cacheList cacheList(_config, _log);
+					class cacheList cacheList(_config, _log, _logError);
 					cacheList.add(cacheFileName, ad);
 				}
 
@@ -390,7 +390,7 @@ void imageProcessor::writeIntoSocket(int socket)
 	}
 	catch(...)
 	{
-		_log->add("ПОМИЛКА. Невідома помилка часу виконання. Параметри: "+_request->data("URL"), 5);
+		_logError->add("ПОМИЛКА. Невідома помилка часу виконання. Параметри: "+_request->data("URL"), 5);
 		writeErrorImgIntoSocket(socket);
 		return;
 	}

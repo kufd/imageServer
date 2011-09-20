@@ -9,9 +9,10 @@ class cacheList
 {
 	class config *_config;
 	class myLog *_log;
+	class myLog *_logError;
 	pthread_mutex_t _mutex;
   public:
-    cacheList(class config *config, class myLog *log);
+    cacheList(class config *config, class myLog *log, class myLog *logError);
     ~cacheList();
     void add(const std::string &filename, int ad);
     void clear();

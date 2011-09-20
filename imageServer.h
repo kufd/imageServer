@@ -26,6 +26,7 @@
 #include "libs/imageProcessor.class.h"
 #include "libs/cacheList.class.h"
 #include <errno.h>
+#include <signal.h>
 
 
 

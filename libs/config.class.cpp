@@ -4,6 +4,7 @@ config::config()
 {
 	//встановлюю значення за замовчуванням
 	_data["log"]="/var/log/imageServer.log";
+	_data["logError"]="/var/log/imageServer-error.log";
 	_data["logLevel"]="9";
 	_data["port"]="1111";
 	_data["imagesDir"]="/var/images";
