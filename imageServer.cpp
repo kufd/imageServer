@@ -66,9 +66,15 @@ void signalStop(int signo)
 
 int main()
 {
+	//set global locale
+	std::locale::global(loc_c);
+
 	int listener;
 	struct sockaddr_in addr;
 	std::set<int> clients, clientsTmp;
+
+	//set logs for config-object
+	config.setLog(&myLog, &myLogError);
 
 	//initialization catching signal SIGINT
 	if(signal(SIGINT,signalStop)==SIG_ERR)
@@ -138,7 +144,7 @@ int main()
 		int mx = std::max(listener, *max_element(clients.begin(), clients.end()));
 		if(select(mx+1, &readset, NULL, NULL, &timeout) <= 0)
 		{
-			myLogError.add((std::string)"WARNING. "+strerror(errno), 0);
+			myLogError.add((std::string)"WARNING. "+strerror(errno), 5);
 			continue;
 			//perror("select");
 			//exit(3);
@@ -151,7 +157,7 @@ int main()
 			int sock = accept(listener, NULL, NULL);
 			if(sock < 0)
 			{
-				myLogError.add((std::string)"WARNING. "+strerror(errno), 0);
+				myLogError.add((std::string)"WARNING. "+strerror(errno), 5);
 				continue;
 				//perror("accept");
 				//exit(3);

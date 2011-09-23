@@ -2,6 +2,9 @@
 
 config::config()
 {
+	_log = NULL;
+	_logError = NULL;
+
 	//встановлюю значення за замовчуванням
 	_data["log"]="/var/log/imageServer.log";
 	_data["logError"]="/var/log/imageServer-error.log";
@@ -10,6 +13,9 @@ config::config()
 	_data["imagesDir"]="/var/images";
 	_data["cacheDir"]="/var/cache";
 	_data["daemon"]="no";
+	_data["uid"]="0";
+	_data["gid"]="0";
+	_data["pidFile"]="/run/imageServer/imageServer.pid";
 
 	//відкриття файлу налаштуваннь
 	std::ifstream file("conf/imageServer.conf", std::ios::in | std::ios::binary);
@@ -75,6 +81,55 @@ config::config()
 
 	_data["cacheListDir"]=_data["cacheDir"]+"/list";
 
+
+	//Set gid and uid for server
+	if(_data["gid"]!="0")
+	{
+		if(setegid(strToInt(_data["gid"])))
+		{
+			std::cout<<"Error setting gid."<<std::endl;
+			exit(1);
+		}
+	}
+	if(_data["uid"]!="0")
+	{
+		if(seteuid(strToInt(_data["uid"])))
+		{
+			std::cout<<"Error setting uid."<<std::endl;
+			exit(1);
+		}
+	}
+
+
+	//create pid file
+	for(int i=1;i<=30;i++)
+	{
+		std::ifstream pidFileTest(_data["pidFile"].c_str(), std::ios::in);
+		if(pidFileTest)
+		{
+			pidFileTest.close();
+			if(i==30)
+			{
+				std::cout<<"Pid-file exists: "<<_data["pidFile"]<<std::endl;
+				exit(1);
+			}
+			exactSleep(2);
+		}
+		else
+			break;
+	}
+	std::ofstream pidFile(_data["pidFile"].c_str(), std::ios::out);
+    if(pidFile)
+    {
+        pidFile<<(getpid());
+        pidFile.close();
+    }
+    else
+    {
+        std::cout<<"Can't create pid-file: "<<_data["pidFile"]<<std::endl;
+        exit(1);
+    }
+
 	//Тут просто створюю директорії без перевірки їх існування
 	//якщо вони вже є то просто функція створення директорії поверне помилку
 	mkdir(_data["cacheDir"].c_str(), 0755);
@@ -103,11 +158,25 @@ config::config()
 
 config::~config()
 {
+	//remove pid file
+	if(remove(_data["pidFile"].c_str())!=0)
+	{
+		if(_logError)
+		{
+			_logError->add("ERROR. Pid file can't be removed: "+_data["pidFile"], 0);
+		}
+	}
 }
 
 std::string config::get(std::string param)
 {
 	return _data[param];
+}
+
+void config::setLog(class myLog *log, class myLog *logError)
+{
+	_log=log;
+	_logError=logError;
 }
 
 
