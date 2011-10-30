@@ -95,6 +95,9 @@ int main()
 
 	myLog.add("Starting server.", 0);
 
+	//create pid-file
+	config.createPidFIle();
+
 	//starting clearing cacheList thread
 	pthread_t threadClearingCacheList;
 	pthread_create(&threadClearingCacheList, NULL, clearCacheList, NULL);

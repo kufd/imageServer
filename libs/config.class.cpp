@@ -102,33 +102,8 @@ config::config()
 
 
 	//create pid file
-	for(int i=1;i<=30;i++)
-	{
-		std::ifstream pidFileTest(_data["pidFile"].c_str(), std::ios::in);
-		if(pidFileTest)
-		{
-			pidFileTest.close();
-			if(i==30)
-			{
-				std::cout<<"Pid-file exists: "<<_data["pidFile"]<<std::endl;
-				exit(1);
-			}
-			exactSleep(2);
-		}
-		else
-			break;
-	}
-	std::ofstream pidFile(_data["pidFile"].c_str(), std::ios::out);
-    if(pidFile)
-    {
-        pidFile<<(getpid());
-        pidFile.close();
-    }
-    else
-    {
-        std::cout<<"Can't create pid-file: "<<_data["pidFile"]<<std::endl;
-        exit(1);
-    }
+	testPidFIle();
+
 
 	//Тут просто створюю директорії без перевірки їх існування
 	//якщо вони вже є то просто функція створення директорії поверне помилку
@@ -136,17 +111,17 @@ config::config()
 	mkdir(_data["cacheListDir"].c_str(), 0755);
 
 	//Створюю піддиректорії кешу
-	for(int i1=48; i1<=112; i1++)
+	for(int i1=48; i1<=122; i1++)
 	{
 		if(i1==58)
 			i1=97;
 		mkdir((_data["cacheDir"]+"/"+(char)i1).c_str(), 0755);
-		for(int i2=48; i2<=112; i2++)
+		for(int i2=48; i2<=122; i2++)
 		{
 			if(i2==58)
 				i2=97;
 			mkdir((_data["cacheDir"]+"/"+(char)i1+"/"+(char)i2).c_str(), 0755);
-			for(int i3=48; i3<=112; i3++)
+			for(int i3=48; i3<=122; i3++)
 			{
 				if(i3==58)
 					i3=97;
@@ -179,4 +154,42 @@ void config::setLog(class myLog *log, class myLog *logError)
 	_logError=logError;
 }
 
+void config::testPidFIle()
+{
+	for(int i=1;i<=30;i++)
+	{
+		std::ifstream pidFileTest(_data["pidFile"].c_str(), std::ios::in);
+		if(pidFileTest)
+		{
+			pidFileTest.close();
+			if(i==30)
+			{
+				std::cout<<"Pid-file exists: "<<_data["pidFile"]<<std::endl;
+				exit(1);
+			}
+			exactSleep(2);
+		}
+		else
+			break;
+	}
+}
+
+void config::createPidFIle()
+{
+	std::ofstream pidFile(_data["pidFile"].c_str(), std::ios::out);
+	if(pidFile)
+	{
+		pidFile.imbue(loc_c);
+		pidFile<<(getpid());
+		pidFile.close();
+	}
+	else
+	{
+		if(_logError)
+		{
+			_logError->add("ERROR. Can't create pid-file: "+_data["pidFile"], 0);
+		}
+		exit(1);
+	}
+}
 

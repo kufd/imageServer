@@ -8,6 +8,10 @@
 #ifndef __IMAGE_SERVER_MAIN_H
 #define __IMAGE_SERVER_MAIN_H
 
+#define VERSION 1.0
+#define NAME "imageServer"
+
+
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,7 +31,6 @@
 #include "libs/cacheList.class.h"
 #include <errno.h>
 #include <signal.h>
-
 
 
 #endif /* __IMAGE_SERVER_MAIN_H */

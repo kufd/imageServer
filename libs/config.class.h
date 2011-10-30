@@ -14,6 +14,8 @@ class config
     ~config();
     std::string get(std::string param);
     void setLog(class myLog *log, class myLog *logError);
+    void testPidFIle();
+    void createPidFIle();
 };
 
 #endif
